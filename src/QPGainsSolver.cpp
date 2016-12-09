@@ -1,0 +1,236 @@
+// This file is part of Tasks.
+//
+// Tasks is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tasks is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Tasks.  If not, see <http://www.gnu.org/licenses/>.
+
+// associated header
+#include "QPGainsSolver.h"
+
+// includes
+// std
+#include <limits>
+
+// RBDyn
+#include <RBDyn/MultiBody.h>
+#include <RBDyn/MultiBodyConfig.h>
+
+// Tasks
+#include "GenQPSolver.h"
+
+namespace tasks
+{
+
+namespace qpgains
+{
+
+
+QPGainsSolver::QPGainsSolver(const std::vector<rbd::MultiBody>& mbs, int robotIndex) :
+	tasks::qp::QPSolver(),
+	robotIndex_(robotIndex),
+	constrDataCompute_(std::unique_ptr<ConstrDataComputation>(new ConstrDataComputation(mbs, robotIndex_))),
+	constrDataStock_(std::make_shared<ConstrData>(mbs[robotIndex_]))
+{
+}
+
+
+void QPGainsSolver::setRobotq0(const std::vector<std::vector<double> > &q0)
+{
+	constrDataCompute_->q0(q0);
+}
+
+
+void QPGainsSolver::setRobotAlpha0(const std::vector<std::vector<double> > &alpha0)
+{
+	constrDataCompute_->alpha0(alpha0);
+}
+
+
+void QPGainsSolver::updateMbc(rbd::MultiBodyConfig& mbc, int rI) const
+{
+	rbd::vectorToParam(
+		solver_->result().segment(data_.alphaDBegin_[rI], data_.alphaD_[rI]),
+		mbc.alphaD);
+
+	const std::vector<int>& list = constrDataStock_->gainsJointsList;
+	int line = data_.gainsBegin_[rI];
+
+	for (auto jIndex: list)
+	{
+		mbc.jointGainsK[jIndex][0] = solver_->result()[line];
+		++line;
+	}
+
+	for (auto jIndex: list)
+	{
+		mbc.jointGainsB[jIndex][0] = solver_->result()[line];
+		++line;
+	}
+
+	assert(line - data_.gainsBegin_[rI] == data_.gains(rI));
+}
+
+
+void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs,
+	std::vector<int> &gainsList)
+{
+	constrDataStock_->setGainsList(mbs[robotIndex_], gainsList);
+}
+
+void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
+	std::vector<tasks::qp::UnilateralContact> uni,
+	std::vector<tasks::qp::BilateralContact> bi)
+{
+	data_.alphaD_.resize(mbs.size());
+	data_.alphaDBegin_.resize(mbs.size());
+
+	data_.uniCont_ = std::move(uni);
+	data_.biCont_ = std::move(bi);
+
+	int nrContacts = data_.nrContacts();
+
+	data_.lambda_.resize(nrContacts);
+	data_.lambdaBegin_.resize(nrContacts);
+
+	data_.gains_.resize(mbs.size());
+	data_.gainsBegin_.resize(mbs.size());
+
+	data_.mobileRobotIndex_.clear();
+	data_.normalAccB_.resize(mbs.size());
+
+	int cumAlphaD = 0;
+	for(std::size_t r = 0; r < mbs.size(); ++r)
+	{
+		const rbd::MultiBody& mb = mbs[r];
+		data_.alphaD_[r] = mb.nrDof();
+		data_.alphaDBegin_[r] = cumAlphaD;
+		data_.normalAccB_[r].resize(mb.nrBodies(),
+			sva::MotionVecd(Eigen::Vector6d::Zero()));
+		cumAlphaD += mb.nrDof();
+		if(mb.nrDof() > 0)
+		{
+			data_.mobileRobotIndex_.push_back(int(r));
+		}
+	}
+	data_.totalAlphaD_ = cumAlphaD;
+
+	int cumLambda = cumAlphaD;
+	int cIndex = 0;
+	data_.allCont_.clear();
+	// counting unilateral contact
+	for(const tasks::qp::UnilateralContact& c: data_.uniCont_)
+	{
+		data_.lambdaBegin_[cIndex] = cumLambda;
+		int lambda = 0;
+		for(std::size_t p = 0; p < c.r1Points.size(); ++p)
+		{
+			lambda += c.nrLambda(int(p));
+		}
+		data_.lambda_[cIndex] = lambda;
+		cumLambda += lambda;
+		++cIndex;
+
+		data_.allCont_.emplace_back(c);
+	}
+	data_.nrUniLambda_ = cumLambda - cumAlphaD;
+
+	// counting bilateral contact
+	for(const tasks::qp::BilateralContact& c: data_.biCont_)
+	{
+		data_.lambdaBegin_[cIndex] = cumLambda;
+		int lambda = 0;
+		for(std::size_t p = 0; p < c.r1Points.size(); ++p)
+		{
+			lambda += c.nrLambda(int(p));
+		}
+		data_.lambda_[cIndex] = lambda;
+		cumLambda += lambda;
+		++cIndex;
+
+		data_.allCont_.emplace_back(c);
+	}
+	data_.nrBiLambda_ = cumLambda - data_.nrUniLambda_ - cumAlphaD;
+	data_.totalLambda_ = data_.nrUniLambda_ + data_.nrBiLambda_;
+
+	constrDataStock_->updateNrVars(mbs[robotIndex_], data_);
+	constrDataCompute_->updateNrVars(mbs[robotIndex_], data_);
+	int cumGains = cumLambda;
+	for(std::size_t r = 0; r < mbs.size(); ++r)
+	{
+		data_.gainsBegin_[r] = cumGains;
+		if(static_cast<int>(r) == robotIndex_)
+		{
+			data_.gains_[r] = 2*static_cast<int>(constrDataStock_->gainsLinesList.size());
+			cumGains += 2*static_cast<int>(constrDataStock_->gainsLinesList.size());
+		}
+		else
+		{
+			data_.gains_[r] = 0;
+		}
+	}
+	data_.totalGains_ = cumGains - cumLambda;
+
+	data_.nrVars_ = data_.totalAlphaD_ + data_.totalLambda_ + data_.totalGains_;
+
+	for(tasks::qp::Task* t: tasks_)
+	{
+		t->updateNrVars(mbs, data_);
+	}
+
+	for(tasks::qp::Constraint* c: constr_)
+	{
+		c->updateNrVars(mbs, data_);
+	}
+
+	solver_->updateSize(data_.nrVars_, maxEqLines_, maxInEqLines_, maxGenInEqLines_);
+}
+
+const std::shared_ptr<ConstrData> QPGainsSolver::getConstrData() const
+{
+	return constrDataStock_;
+}
+
+const Eigen::VectorXd QPGainsSolver::gainsVec() const
+{
+	return solver_->result().segment(data_.gainsBegin(), data_.totalGains_);
+}
+
+
+const Eigen::VectorXd QPGainsSolver::gainsVec(int rIndex) const
+{
+	return solver_->result().segment(data_.gainsBegin_[rIndex],
+		data_.gains_[rIndex]);
+}
+
+void QPGainsSolver::preUpdate(const std::vector<rbd::MultiBody> &mbs,
+	const std::vector<rbd::MultiBodyConfig> &mbcs)
+{
+	data_.computeNormalAccB(mbs, mbcs);
+	constrDataCompute_->computeGainsConstrMatrices(mbs, mbcs, constrDataStock_);
+	for(std::size_t i = 0; i < constr_.size(); ++i)
+	{
+		constr_[i]->update(mbs, mbcs, data_);
+	}
+
+	for(std::size_t i = 0; i < tasks_.size(); ++i)
+	{
+		tasks_[i]->update(mbs, mbcs, data_);
+	}
+
+	solver_->updateMatrix(tasks_, eqConstr_, inEqConstr_, genInEqConstr_,
+		boundConstr_);
+}
+
+
+} // namespace qpgains
+
+} // namespace tasks

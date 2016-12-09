@@ -1242,7 +1242,7 @@ private:
 };
 
 
-class RelativeDistTask : public HighLevelTask
+class TASKS_DLLAPI RelativeDistTask : public HighLevelTask
 {
 public:
 	RelativeDistTask(const std::vector<rbd::MultiBody>& mbs, const int rIndex, const double timestep,
@@ -1290,7 +1290,7 @@ private:
 };
 
 
-class VectorOrientationTask : public HighLevelTask
+class TASKS_DLLAPI VectorOrientationTask : public HighLevelTask
 {
 public:
 	VectorOrientationTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,

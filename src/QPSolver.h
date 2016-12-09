@@ -150,7 +150,7 @@ protected:
 									std::vector<rbd::MultiBodyConfig>& mbcs,
 		bool success);
 
-private:
+protected:
 	std::vector<Constraint*> constr_;
 	std::vector<Equality*> eqConstr_;
 	std::vector<Inequality*> inEqConstr_;

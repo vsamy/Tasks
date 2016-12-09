@@ -34,6 +34,11 @@ struct MultiBodyConfig;
 namespace tasks
 {
 
+namespace qpgains
+{
+class QPGainsSolver;
+}
+
 namespace qp
 {
 
@@ -42,6 +47,7 @@ class TASKS_DLLAPI SolverData
 {
 public:
 	friend class QPSolver;
+	friend class tasks::qpgains::QPGainsSolver;
 
 	SolverData();
 
@@ -60,9 +66,19 @@ public:
 		return totalLambda_;
 	}
 
+	int totalGains() const
+	{
+		return totalGains_;
+	}
+
 	int alphaD(int robotIndex) const
 	{
 		return alphaD_[robotIndex];
+	}
+
+	int gains(int robotIndex) const
+	{
+		return gains_[robotIndex];
 	}
 
 	int lambda(int contactIndex) const
@@ -80,9 +96,19 @@ public:
 		return alphaDBegin_[robotIndex];
 	}
 
+	int gainsBegin(int robotIndex) const
+	{
+		return gainsBegin_[robotIndex];
+	}
+
 	int lambdaBegin() const
 	{
 		return totalAlphaD_;
+	}
+
+	int gainsBegin() const
+	{
+		return totalAlphaD_ + totalLambda_;
 	}
 
 	int lambdaBegin(int contactIndex) const
@@ -159,6 +185,11 @@ private:
 	std::vector<int> mobileRobotIndex_; //< robot index with dof > 0
 	/// normal acceleration of each body of each robot
 	std::vector<std::vector<sva::MotionVecd>> normalAccB_;
+
+	// Add gains as variables
+	std::vector<int> gains_;
+	std::vector<int> gainsBegin_;
+	int totalGains_;
 };
 
 
