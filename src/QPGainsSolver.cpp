@@ -19,6 +19,7 @@
 // includes
 // std
 #include <limits>
+#include <utility>
 
 // RBDyn
 #include <RBDyn/MultiBody.h>
@@ -34,24 +35,38 @@ namespace qpgains
 {
 
 
-QPGainsSolver::QPGainsSolver(const std::vector<rbd::MultiBody>& mbs, int robotIndex) :
+QPGainsSolver::QPGainsSolver() :
 	tasks::qp::QPSolver(),
-	robotIndex_(robotIndex),
-	constrDataCompute_(std::unique_ptr<ConstrDataComputation>(new ConstrDataComputation(mbs, robotIndex_))),
-	constrDataStock_(std::make_shared<ConstrData>(mbs[robotIndex_]))
+	constrDataCompute_(),
+	constrDataStock_()
 {
 }
 
 
-void QPGainsSolver::setRobotq0(const std::vector<std::vector<double> > &q0)
+void QPGainsSolver::addRobotToAdaptiveQP(const std::vector<rbd::MultiBody>& mbs, int robotIndex)
 {
-	constrDataCompute_->q0(q0);
+    robotIndex_.push_back(robotIndex);
+    constrDataCompute_.emplace_back(std::make_unique<ConstrDataComputation>(mbs, robotIndex));
+    constrDataStock_.emplace_back(std::make_shared<ConstrData>(mbs[robotIndex]));
 }
 
 
-void QPGainsSolver::setRobotAlpha0(const std::vector<std::vector<double> > &alpha0)
+void QPGainsSolver::setRobotq0(int robotIndex, const std::vector<std::vector<double> > &q0)
 {
-	constrDataCompute_->alpha0(alpha0);
+    constrDataCompute_[robotIndex]->q0(q0);
+}
+
+
+void QPGainsSolver::setRobotAlpha0(int robotIndex, const std::vector<std::vector<double> > &alpha0)
+{
+    constrDataCompute_[robotIndex]->alpha0(alpha0);
+}
+
+
+void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs,
+	int robotIndex, std::vector<int> &gainsList)
+{
+    constrDataStock_[robotIndex]->setGainsList(mbs[robotIndex], gainsList);
 }
 
 
@@ -61,7 +76,7 @@ void QPGainsSolver::updateMbc(rbd::MultiBodyConfig& mbc, int rI) const
 		solver_->result().segment(data_.alphaDBegin_[rI], data_.alphaD_[rI]),
 		mbc.alphaD);
 
-	const std::vector<int>& list = constrDataStock_->gainsJointsList;
+	const std::vector<int>& list = constrDataStock_[rI]->gainsJointsList;
 	int line = data_.gainsBegin_[rI];
 
 	for (auto jIndex: list)
@@ -79,12 +94,6 @@ void QPGainsSolver::updateMbc(rbd::MultiBodyConfig& mbc, int rI) const
 	assert(line - data_.gainsBegin_[rI] == data_.gains(rI));
 }
 
-
-void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs,
-	std::vector<int> &gainsList)
-{
-	constrDataStock_->setGainsList(mbs[robotIndex_], gainsList);
-}
 
 void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
 	std::vector<tasks::qp::UnilateralContact> uni,
@@ -161,21 +170,19 @@ void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
 	data_.nrBiLambda_ = cumLambda - data_.nrUniLambda_ - cumAlphaD;
 	data_.totalLambda_ = data_.nrUniLambda_ + data_.nrBiLambda_;
 
-	constrDataStock_->updateNrVars(mbs[robotIndex_], data_);
-	constrDataCompute_->updateNrVars(mbs[robotIndex_], data_);
+    for(int rI: robotIndex_)
+    {
+        constrDataStock_[rI]->updateNrVars(mbs[rI], data_);
+        constrDataCompute_[rI]->updateNrVars(mbs[rI], data_);
+    }
 	int cumGains = cumLambda;
-	for(std::size_t r = 0; r < mbs.size(); ++r)
+    for(std::size_t r = 0; r < mbs.size(); ++r)
+        data_.gains_[r] = 0;
+    for(int rI: robotIndex_)
 	{
-		data_.gainsBegin_[r] = cumGains;
-		if(static_cast<int>(r) == robotIndex_)
-		{
-			data_.gains_[r] = 2*static_cast<int>(constrDataStock_->gainsLinesList.size());
-			cumGains += 2*static_cast<int>(constrDataStock_->gainsLinesList.size());
-		}
-		else
-		{
-			data_.gains_[r] = 0;
-		}
+		data_.gainsBegin_[rI] = cumGains;
+        data_.gains_[rI] = 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
+        cumGains += 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
 	}
 	data_.totalGains_ = cumGains - cumLambda;
 
@@ -194,9 +201,9 @@ void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
 	solver_->updateSize(data_.nrVars_, maxEqLines_, maxInEqLines_, maxGenInEqLines_);
 }
 
-const std::shared_ptr<ConstrData> QPGainsSolver::getConstrData() const
+const std::shared_ptr<ConstrData> QPGainsSolver::getConstrData(int robotIndex) const
 {
-	return constrDataStock_;
+	return constrDataStock_[robotIndex];
 }
 
 const Eigen::VectorXd QPGainsSolver::gainsVec() const
@@ -215,7 +222,8 @@ void QPGainsSolver::preUpdate(const std::vector<rbd::MultiBody> &mbs,
 	const std::vector<rbd::MultiBodyConfig> &mbcs)
 {
 	data_.computeNormalAccB(mbs, mbcs);
-	constrDataCompute_->computeGainsConstrMatrices(mbs, mbcs, constrDataStock_);
+    for(int rI: robotIndex_)
+        constrDataCompute_[rI]->computeGainsConstrMatrices(mbs, mbcs, constrDataStock_[rI]);
 	for(std::size_t i = 0; i < constr_.size(); ++i)
 	{
 		constr_[i]->update(mbs, mbcs, data_);

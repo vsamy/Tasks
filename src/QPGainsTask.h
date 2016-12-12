@@ -51,7 +51,7 @@ public:
 	// Add the pointer to the problem datas
 	void configureTask(const QPGainsSolver& sol)
 	{
-		constrData_ = sol.getConstrData();
+		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
 	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,

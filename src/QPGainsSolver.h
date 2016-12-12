@@ -17,6 +17,7 @@
 
 // std
 #include <memory>
+#include <vector>
 
 // Inherited header
 #include "QPSolver.h"
@@ -40,19 +41,20 @@ namespace qpgains
 class QPGainsSolver : public tasks::qp::QPSolver
 {
 public:
-	QPGainsSolver(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
+	QPGainsSolver();
 	~QPGainsSolver() {}
 
-	void setRobotq0(const std::vector<std::vector<double> > &q0);
-	void setRobotAlpha0(const std::vector<std::vector<double> > &alpha0);
-	void setGainsList(const std::vector<rbd::MultiBody> &mbs, std::vector<int> &gainsList);
+    void addRobotToAdaptiveQP(const std::vector<rbd::MultiBody> & mbs, int robotIndex);
+	void setRobotq0(int robotIndex, const std::vector<std::vector<double> > &q0);
+	void setRobotAlpha0(int robotIndex, const std::vector<std::vector<double> > &alpha0);
+	void setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList);
 	virtual void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const;
 
 	virtual void nrVars(const std::vector<rbd::MultiBody>& mbs,
 		std::vector<tasks::qp::UnilateralContact> uni,
 		std::vector<tasks::qp::BilateralContact> bi);
 
-	const std::shared_ptr<ConstrData> getConstrData() const;
+	const std::shared_ptr<ConstrData> getConstrData(int robotIndex) const;
 
 	const Eigen::VectorXd gainsVec() const;
 	const Eigen::VectorXd gainsVec(int rIndex) const;
@@ -62,10 +64,9 @@ protected:
 		const std::vector<rbd::MultiBodyConfig>& mbcs);
 
 protected:
-	int robotIndex_;
-	bool isGainsListUpdated_;
-	std::unique_ptr<ConstrDataComputation> constrDataCompute_;
-	std::shared_ptr<ConstrData> constrDataStock_;
+    std::vector<int> robotIndex_;
+	std::vector<std::unique_ptr<ConstrDataComputation>> constrDataCompute_;
+	std::vector<std::shared_ptr<ConstrData>> constrDataStock_;
 };
 
 

@@ -54,7 +54,7 @@ public:
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
 	{
-		constrData_ = sol.getConstrData();
+		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
 	// Constraint
@@ -82,10 +82,10 @@ private:
 
 
 
-class MotionConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
+class MotionGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
 {
 public:
-	MotionConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+	MotionGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
 		const TorqueBound& tb);
 
 	void computeTorque(const Eigen::VectorXd& alphaD,
@@ -97,7 +97,7 @@ public:
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
 	{
-		constrData_ = sol.getConstrData();
+		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
 	// Constraint
@@ -152,7 +152,7 @@ public:
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
 	{
-		constrData_ = sol.getConstrData();
+		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
 	// Constraint
@@ -215,7 +215,7 @@ public:
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
 	{
-		constrData_ = sol.getConstrData();
+		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
 	// Constraint

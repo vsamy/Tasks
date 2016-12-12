@@ -108,11 +108,11 @@ const Eigen::VectorXd& BoundGainsConstr::Upper() const
 
 
 /**
-	*															MotionConstr
+	*															MotionGainsConstr
 	*/
 
 
-MotionConstr::MotionConstr(const std::vector<rbd::MultiBody>& mbs,
+MotionGainsConstr::MotionGainsConstr(const std::vector<rbd::MultiBody>& mbs,
 	int robotIndex, const TorqueBound& tb):
 	robotIndex_(robotIndex),
 	alphaDBegin_(-1),
@@ -134,7 +134,7 @@ MotionConstr::MotionConstr(const std::vector<rbd::MultiBody>& mbs,
 }
 
 
-void MotionConstr::computeTorque(const Eigen::VectorXd& alphaD, const Eigen::VectorXd& lambda)
+void MotionGainsConstr::computeTorque(const Eigen::VectorXd& alphaD, const Eigen::VectorXd& lambda)
 {
 	Eigen::VectorXd torqueSelect(constrData_->noGainsLinesList.size());
 	Eigen::VectorXd CSelect(constrData_->noGainsLinesList.size());
@@ -154,20 +154,20 @@ void MotionConstr::computeTorque(const Eigen::VectorXd& alphaD, const Eigen::Vec
 }
 
 
-const Eigen::VectorXd& MotionConstr::torque() const
+const Eigen::VectorXd& MotionGainsConstr::torque() const
 {
 	return curTorque_;
 }
 
 
-void MotionConstr::torque(const std::vector<rbd::MultiBody>& /* mbs */,
+void MotionGainsConstr::torque(const std::vector<rbd::MultiBody>& /* mbs */,
 	std::vector<rbd::MultiBodyConfig>& mbcs) const
 {
 	rbd::vectorToParam(curTorque_, mbcs[robotIndex_].jointTorque);
 }
 
 
-void MotionConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */,
+void MotionGainsConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */,
 	const tasks::qp::SolverData& data)
 {
 	assert(constrData_ != nullptr);
@@ -183,7 +183,7 @@ void MotionConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */,
 }
 
 
-void MotionConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
+void MotionGainsConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
 	const std::vector<rbd::MultiBodyConfig>& /* mbcs */,
 	const tasks::qp::SolverData& /* data */)
 {
@@ -210,37 +210,37 @@ void MotionConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
 }
 
 
-int MotionConstr::maxGenInEq() const
+int MotionGainsConstr::maxGenInEq() const
 {
 	return static_cast<int>(nrLines_);
 }
 
 
-const Eigen::MatrixXd& MotionConstr::AGenInEq() const
+const Eigen::MatrixXd& MotionGainsConstr::AGenInEq() const
 {
 	return A_;
 }
 
 
-const Eigen::VectorXd& MotionConstr::LowerGenInEq() const
+const Eigen::VectorXd& MotionGainsConstr::LowerGenInEq() const
 {
 	return AL_;
 }
 
 
-const Eigen::VectorXd& MotionConstr::UpperGenInEq() const
+const Eigen::VectorXd& MotionGainsConstr::UpperGenInEq() const
 {
 	return AU_;
 }
 
 
-std::string MotionConstr::nameGenInEq() const
+std::string MotionGainsConstr::nameGenInEq() const
 {
-	return "MotionConstr";
+	return "MotionGainsConstr";
 }
 
 
-std::string MotionConstr::descGenInEq(const std::vector<rbd::MultiBody>& mbs,
+std::string MotionGainsConstr::descGenInEq(const std::vector<rbd::MultiBody>& mbs,
 	int line)
 {
 	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], constrData_->noGainsLinesList[line], true);
