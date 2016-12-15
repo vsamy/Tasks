@@ -48,11 +48,10 @@ public:
 	void setRobotq0(int robotIndex, const std::vector<std::vector<double> > &q0);
 	void setRobotAlpha0(int robotIndex, const std::vector<std::vector<double> > &alpha0);
 	void setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList);
-	virtual void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const;
+	void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const override;
 
-	virtual void nrVars(const std::vector<rbd::MultiBody>& mbs,
-		std::vector<tasks::qp::UnilateralContact> uni,
-		std::vector<tasks::qp::BilateralContact> bi);
+	void nrVars(const std::vector<rbd::MultiBody>& mbs, std::vector<tasks::qp::UnilateralContact> uni,
+		std::vector<tasks::qp::BilateralContact> bi) override;
 
 	const std::shared_ptr<ConstrData> getConstrData(int robotIndex) const;
 
@@ -60,8 +59,8 @@ public:
 	const Eigen::VectorXd gainsVec(int rIndex) const;
 
 protected:
-	virtual void preUpdate(const std::vector<rbd::MultiBody>& mbs,
-		const std::vector<rbd::MultiBodyConfig>& mbcs);
+	void preUpdate(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs) override;
+    std::size_t elemPosByRobotIndex(int robotIndex, const std::string& funName) const;
 
 protected:
     std::vector<int> robotIndex_;

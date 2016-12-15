@@ -83,11 +83,11 @@ public:
 		* \param mbc reslut of the solved problem
 		* \param robotIndex robot index associated with mbc
 		*/
-	void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const;
+	virtual void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const;
 
 	void updateConstrSize();
 
-	void nrVars(const std::vector<rbd::MultiBody>& mbs,
+	virtual void nrVars(const std::vector<rbd::MultiBody>& mbs,
 		std::vector<UnilateralContact> uni,
 		std::vector<BilateralContact> bi);
 	int nrVars() const;
@@ -144,7 +144,7 @@ public:
 	boost::timer::cpu_times solveAndBuildTime() const;
 
 protected:
-	void preUpdate(const std::vector<rbd::MultiBody>& mbs,
+	virtual void preUpdate(const std::vector<rbd::MultiBody>& mbs,
 								const std::vector<rbd::MultiBodyConfig>& mbcs);
 	void postUpdate(const std::vector<rbd::MultiBody>& mbs,
 									std::vector<rbd::MultiBodyConfig>& mbcs,
