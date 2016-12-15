@@ -21,6 +21,7 @@
 #include <limits>
 #include <utility>
 #include <algorithm>
+#include <stdexcept>
 
 // RBDyn
 #include <RBDyn/MultiBody.h>
@@ -180,7 +181,7 @@ void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs, std::vector<t
 	for(int rI: robotIndex_)
 	{
 		constrDataStock_[rI]->updateNrVars(mbs[rI], data_);
-		constrDataCompute_[rI]->updateNrVars(mbs[rI], data_);
+		constrDataCompute_[rI]->updateNrVars(mbs, data_);
 	}
 	int cumGains = cumLambda;
 	for(std::size_t r = 0; r < mbs.size(); ++r)
@@ -213,15 +214,15 @@ const std::shared_ptr<ConstrData> QPGainsSolver::getConstrData(int robotIndex) c
 }
 
 
-const Eigen::VectorXd QPGainsSolver::gainsVec() const
+Eigen::VectorXd QPGainsSolver::gainsVec() const
 {
 	return solver_->result().segment(data_.gainsBegin(), data_.totalGains_);
 }
 
 
-const Eigen::VectorXd QPGainsSolver::gainsVec(int rIndex) const
+Eigen::VectorXd QPGainsSolver::gainsVec(int robotIndex) const
 {
-	return solver_->result().segment(data_.gainsBegin_[rIndex],	data_.gains_[rIndex]);
+	return solver_->result().segment(data_.gainsBegin_[robotIndex],	data_.gains_[robotIndex]);
 }
 
 
@@ -247,7 +248,7 @@ std::size_t QPGainsSolver::elemPosByRobotIndex(int robotIndex, const std::string
 	if(it != robotIndex_.cend())
 		return std::distance(robotIndex_.cbegin(), it);
 	else
-		throw("Bad robot index in " + funName);
+		throw(std::runtime_error("Bad robot index in " + funName));
 }
 
 

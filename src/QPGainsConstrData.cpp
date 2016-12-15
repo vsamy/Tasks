@@ -171,9 +171,9 @@ ConstrDataComputation::ConstrDataComputation(const std::vector<rbd::MultiBody>& 
 }
 
 
-void ConstrDataComputation::updateNrVars(const rbd::MultiBody& mb,
-	const tasks::qp::SolverData& data)
+void ConstrDataComputation::updateNrVars(const std::vector<rbd::MultiBody> &mbs, const tasks::qp::SolverData& data)
 {
+	const auto& mb = mbs[robotIndex_];
 	lambdaBegin_ = data.lambdaBegin();
 
 	cont_.clear();

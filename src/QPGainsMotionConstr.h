@@ -41,35 +41,63 @@ namespace qpgains
 {
 class ConstrData;
 
-
+/**
+	* Bound constraint for \f$K\f$ and \f$B\f$
+	*/
 class TASKS_DLLAPI BoundGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Bound>
 {
 public:
-	/**
-		* @param mbs Multi-robot system.
-		* @param robotIndex Constrained robot Index in mbs.
+	/** Constructor
+		* @param mbs Multi bodies of all robots
+		* @param robotIndex Constrained robot Index in mbs
 		*/
 	BoundGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
 
-	// Add the pointer to the problem datas
+	/** Assign the pointer to the problem datas.
+		@param sol The solver the constraint belongs to
+		@warning This must be called before any update.
+		*/
 	void configureConstraint(const QPGainsSolver& sol)
 	{
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
+	/** Update the system size
+	 * @param mbs Multi bodies of all robots
+	 * @param data The datas of the solver
+	 */
 	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
+	/** Update the constraint
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 * @param data The datas of the solver
+	 */
+	void update(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data) override;
 
-	void update(const std::vector<rbd::MultiBody>& /* mbs */, const std::vector<rbd::MultiBodyConfig>& /* mbcs */,
-		const tasks::qp::SolverData& /* data */) override;
-
+	/** Return the name of the constraint
+	 * @return The name of the constraint
+	 */
 	std::string nameBound() const override;
+	/** Return the name of the joint that fails when the qp fails.
+	 * @param mb Multi bodies of all robots
+	 * @param line The line for which the qp failed
+	 * @return The name of the joint
+	 */
 	std::string descBound(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	// Bound Constraint
+	/** Gives the position of bound constraint inthe qp's optimization vector
+		* @return The position
+		*/
 	int beginVar() const override;
 
+	/** Get the computed lower limit
+		* @return The lower limite
+		*/
 	const Eigen::VectorXd& Lower() const override;
+	/** Get the computed upper limit
+		* @return The upper limite
+		*/
 	const Eigen::VectorXd& Upper() const override;
 
 private:
@@ -79,37 +107,84 @@ private:
 };
 
 
-
+/** The equation of motion as a constraint for non adaptive joints.
+	* It replaces the @tasks::qp::MotionConstr for the adaptive qp.
+	* The constraint is \f$\underline{\tau} \leq H\ddot{q} + c -J^{T}G\lambda \leq \overline{\tau}\f$.
+	*/
 class TASKS_DLLAPI MotionGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
 {
 public:
+	/** Constructor
+		* @param mbs Multi bodies of all robots
+		* @param robotIndex Constrained robot Index in mbs
+		* @param tb The torque limits
+		*/
 	MotionGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex, const TorqueBound& tb);
 
+	/** Compute the torques of the @see ConstrData::noGainsLinesList
+		@param alphaD The generalized acceleration vector
+		@param lambda The contacts
+		*/
 	void computeTorque(const Eigen::VectorXd& alphaD, const Eigen::VectorXd& lambda);
+	/** Return the computed torques of the @see ConstrData::noGainsLinesList
+		@return The torque vector
+		*/
 	const Eigen::VectorXd& torque() const;
+	/** Save the computed torque into the multi body config of the robot.
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 */
 	void torque(const std::vector<rbd::MultiBody>& mbs,	std::vector<rbd::MultiBodyConfig>& mbcs) const;
 
-	// Add the pointer to the problem datas
+	/** Assign the pointer to the problem datas.
+		@param sol The solver the constraint belongs to
+		@warning This must be called before any update.
+		*/
 	void configureConstraint(const QPGainsSolver& sol)
 	{
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
+	/** Update the system size
+	 * @param mbs Multi bodies of all robots
+	 * @param data The datas of the solver
+	 */
 	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
-
-	void update(const std::vector<rbd::MultiBody>& mbs,	const std::vector<rbd::MultiBodyConfig>& mbcs,
+	/** Update the constraint
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 * @param data The datas of the solver
+	 */
+	void update(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs,
 		const tasks::qp::SolverData& data) override;
 
-	// Description
+	/** Return the name of the constraint
+	 * @return The name of the constraint
+	 */
 	std::string nameGenInEq() const override;
+	/** Return the name of the joint that fails when the qp fails.
+	 * @param mb Multi bodies of all robots
+	 * @param line The line for which the qp failed
+	 * @return The name of the joint
+	 */
 	std::string descGenInEq(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	// Inequality Constraint
+	/** Return the number of constraints
+	 * @return The number of constraints
+	 */
 	int maxGenInEq() const override;
 
+	/** Get the computed constraint matrix
+		* @return The matrix
+		*/
 	const Eigen::MatrixXd& AGenInEq() const override;
+	/** Get the computed lower limit
+		* @return The lower limite
+		*/
 	const Eigen::VectorXd& LowerGenInEq() const override;
+	/** Get the computed upper limit
+		* @return The upper limite
+		*/
 	const Eigen::VectorXd& UpperGenInEq() const override;
 
 protected:
@@ -125,32 +200,63 @@ protected:
 };
 
 
-
+/** The equation of motion as a constraint for adaptive joints.
+	* The constraint is \f$H\ddot{q} + c -J^{T}G\lambda = Ke + B\dot{e}\f$.
+	*/
 class TASKS_DLLAPI MotionGainsEqualConstr : public tasks::qp::ConstraintFunction<tasks::qp::Equality>
 {
 public:
+	/** Constructor
+		* @param mbs Multi bodies of all robots
+		* @param robotIndex Constrained robot Index in mbs
+		*/
 	MotionGainsEqualConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
 
-	// Add the pointer to the problem datas
+	/** Assign the pointer to the problem datas.
+		@param sol The solver the constraint belongs to
+		@warning This must be called before any update.
+		*/
 	void configureConstraint(const QPGainsSolver& sol)
 	{
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
+	/** Update the system size
+	 * @param mbs Multi bodies of all robots
+	 * @param data The datas of the solver
+	 */
 	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
-
+	/** Update the constraint
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 * @param data The datas of the solver
+	 */
 	void update(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs,
 		const tasks::qp::SolverData& data) override;
 
-	// Description
+	/** Return the name of the constraint
+	 * @return The name of the constraint
+	 */
 	std::string nameEq() const override;
+	/** Return the name of the joint that fails when the qp fails.
+	 * @param mb Multi bodies of all robots
+	 * @param line The line for which the qp failed
+	 * @return The name of the joint
+	 */
 	std::string descEq(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	// Inequality Constraint
+	/** Return the number of constraints
+	 * @return The number of constraints
+	 */
 	int maxEq() const override;
 
+	/** Get the computed constraint matrix
+		* @return The matrix
+		*/
 	const Eigen::MatrixXd& AEq() const override;
+	/** Get the computed constraint vector
+		* @return The vector
+		*/
 	const Eigen::VectorXd& bEq() const override;
 
 protected:
@@ -166,37 +272,82 @@ protected:
 };
 
 
+/** This constraint ensures that the torques are under their respective limits
+	* The constraint is \f$\underline{\tau} \leq Ke + B\dot{e} \leq \overline{\tau}\f$.
+	*/
 class TASKS_DLLAPI TorquePDConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
 {
 public:
+	/** Constructor
+		* @param mbs Multi bodies of all robots
+		* @param robotIndex Constrained robot Index in mbs
+		* @param tb The torque limits
+		*/
 	TorquePDConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex, const TorqueBound& tb);
 
+	/** Compute the torques of the @see ConstrData::gainsLinesList
+		@param gains The gains \f$K\f$ and \f$B\f$
+		*/
 	void computeMotorTorque(const Eigen::VectorXd& gains);
+	/** Return the computed torques of the @see ConstrData::noGainsLinesList
+		@return The torque vector
+		*/
 	const Eigen::VectorXd& motorTorque() const;
+	/** Save the computed torque into the multi body config of the robot.
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 */
 	void motorTorque(const std::vector<rbd::MultiBody>& mbs, std::vector<rbd::MultiBodyConfig>& mbcs) const;
 
-	// Add the pointer to the problem datas
-    // Need to be called right after addToSolver
+	/** Assign the pointer to the problem datas.
+		@param sol The solver the constraint belongs to
+		@warning This must be called before any update.
+		*/
 	void configureConstraint(const QPGainsSolver& sol)
 	{
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
+	/** Update the system size
+	 * @param mbs Multi bodies of all robots
+	 * @param data The datas of the solver
+	 */
 	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
-
-	void update(const std::vector<rbd::MultiBody>& mb, const std::vector<rbd::MultiBodyConfig>& mbcs,
+	/** Update the constraint
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 * @param data The datas of the solver
+	 */
+	void update(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs,
 		const tasks::qp::SolverData& data) override;
 
-	// Description
+	/** Return the name of the constraint
+	 * @return The name of the constraint
+	 */
 	std::string nameGenInEq() const override;
+	/** Return the name of the joint that fails when the qp fails.
+	 * @param mb Multi bodies of all robots
+	 * @param line The line for which the qp failed
+	 * @return The name of the joint
+	 */
 	std::string descGenInEq(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	// Inequality Constraint
+	/** Return the number of constraints
+	 * @return The number of constraints
+	 */
 	int maxGenInEq() const override;
 
+	/** Get the computed constraint matrix
+		* @return The matrix
+		*/
 	const Eigen::MatrixXd& AGenInEq() const override;
+	/** Get the computed lower limit
+		* @return The lower limite
+		*/
 	const Eigen::VectorXd& LowerGenInEq() const override;
+	/** Get the computed upper limit
+		* @return The upper limite
+		*/
 	const Eigen::VectorXd& UpperGenInEq() const override;
 
 protected:

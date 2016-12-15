@@ -47,56 +47,86 @@ class FrictionCone;
 namespace qpgains
 {
 
+/** This structure keeps all the computation datas.
+ * It holds information of desired adaptive joints,
+ * equation of motion matrices and vectors,
+ * contact matrices,
+ * and position and velocity errors
+ */
 struct ConstrData
 {
+	/** Constructor
+		* @param mb The multi body of the robot
+		*/
 	ConstrData(const rbd::MultiBody& mb);
-	~ConstrData() {}
+	/** Destructor */
+	~ConstrData() = default;
 
-	void setGainsList(const rbd::MultiBody& mb, const std::vector<int> & jointsList);
+	/** Set the desired compliant joints
+		* @param mb The multi body of the robot
+		* @param jointsList The list of the joints to be compliant
+		*/
+	void setGainsList(const rbd::MultiBody& mb, const std::vector<int>& jointsList);
+	/** Update the system size
+		* @param mb Multi bodies of the robot
+		* @param data The datas of the solver
+		*/	
 	void updateNrVars(const rbd::MultiBody& mb, const tasks::qp::SolverData& data);
 
+	/** Insert the specific rows of a matrix into another matrix in a list order.
+		* @param lineList The list of rows to copy
+		* @param matExtract The matrix from which the row is copied
+		* @param matOut The maxtrix to which the row is copied
+		*/
 	void insertSpecificLines(std::vector<int>& lineList,
 		const Eigen::MatrixXd& matExtract, Eigen::Ref<Eigen::MatrixXd> matOut);
 
-	// Vector of joint index for which gains will be changed
-	std::vector<int> gainsJointsList;
-
-	// Vector of qp lines corresponding to joint index for which gains will be changed
-	std::vector<int> gainsLinesList;
-
-	// Vector of qp lines corresponding to other joint index
-	std::vector<int> noGainsLinesList;
-
-	// Stock mass matrix relative to the rindex robot
-	Eigen::MatrixXd H;
-
-	// Stock the Coriolis vector
-	Eigen::VectorXd C;
-
-	// Stock the contact matrix
-	Eigen::MatrixXd minusJtG;
-
-	// Stock the error vector
-	Eigen::VectorXd error;
-
-	// Stock the speed error vector
-	Eigen::VectorXd derror;
+	std::vector<int> gainsJointsList; /**< Vector of joint index for which gains will be changed */
+	std::vector<int> gainsLinesList; /**< Vector of qp lines corresponding to joint index for which gains will be changed */
+	std::vector<int> noGainsLinesList; /**< Vector of qp lines corresponding to other joint index */
+	Eigen::MatrixXd H; /**< Stock mass matrix relative to the rindex robot */
+	Eigen::VectorXd C; /**< Stock the Coriolis and gravity vector */
+	Eigen::MatrixXd minusJtG; /**< Stock the contact matrix */
+	Eigen::VectorXd error; /**< Stock the position error vector */
+	Eigen::VectorXd derror; /**< Stock the velocity error vector */
 };
 
 
+/** This class makes all the computations required for updating the constraints
+	* It stocks every results into a @see ConstrData structure.
+	*/
 class ConstrDataComputation
 {
 
 public:
+	/** Constructor
+	 	* @param mbs Multi bodies of all robots
+		* @param robotIndex The index of the robot
+		*/
 	ConstrDataComputation(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
-	~ConstrDataComputation() {}
+	/** Destructor */
+	~ConstrDataComputation() = default;
 
-	void updateNrVars(const rbd::MultiBody &mb, const tasks::qp::SolverData &data);
-	void q0(const std::vector<std::vector<double> >& q0);
-	void alpha0(const std::vector<std::vector<double> >& alpha0);
+	/** Update the system size
+		* @param mb Multi bodies of all the robots
+		* @param data The datas of the solver
+		*/	
+	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData &data);
+	/** Set the position reference vector
+		* @param q0 The vector of vector of the position reference vector
+		*/
+	void q0(const std::vector<std::vector<double>>& q0);
+	/** Set the velocity reference vector
+		* @param alpha0 The vector of vector of the velocity reference vector
+		*/
+	void alpha0(const std::vector<std::vector<double>>& alpha0);
 
-	void computeGainsConstrMatrices(const std::vector<rbd::MultiBody>& mbs,
-		const std::vector<rbd::MultiBodyConfig>& mbcs,
+	/** Compute all the necessary matrices and vectors of the equation of motion and PD control.
+		* @param mbs Multi bodies of all the robots
+		* @param mbcs Multi bodies configs of all the robots
+		* @param stockData The structure in which the results are copied
+		*/
+	void computeGainsConstrMatrices(const std::vector<rbd::MultiBody>& mbs,	const std::vector<rbd::MultiBodyConfig>& mbcs,
 		const std::shared_ptr<ConstrData>& stockData);
 
 private:
@@ -123,13 +153,13 @@ private:
 		std::vector<Eigen::Vector3d> points;
 		// BEWARE generator are minus to avoid one multiplication by -1 in the
 		// update method
-		std::vector<Eigen::Matrix<double, 3, Eigen::Dynamic> > minusGenerators;
+		std::vector<Eigen::Matrix<double, 3, Eigen::Dynamic>> minusGenerators;
 	};
 
 private:
 	int robotIndex_, lambdaBegin_, nrParam_, nrDof_;
 	rbd::ForwardDynamics fd_;
-	std::vector<std::vector<double> > q0_, alpha0_;
+	std::vector<std::vector<double>> q0_, alpha0_;
 	Eigen::MatrixXd fullJacLambda_, jacTrans_, jacLambda_;
 	std::vector<ContactData> cont_;
 };
