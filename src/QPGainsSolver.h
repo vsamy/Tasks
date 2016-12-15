@@ -69,6 +69,6 @@ protected:
 };
 
 
-}
+} // namespace qpgains
 
-}
+} // namespace tasks
