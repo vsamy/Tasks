@@ -53,8 +53,8 @@ void GainsTask::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */,
 	C_.setZero(gainsLength);
 }
 
-void GainsTask::update(const std::vector<rbd::MultiBody>& /* mbs */,
-	const std::vector<rbd::MultiBodyConfig>& /* mbcs */, const tasks::qp::SolverData& /* data */)
+void GainsTask::update(const std::vector<rbd::MultiBody>& /* mbs */, const std::vector<rbd::MultiBodyConfig>& /* mbcs */, 
+	const tasks::qp::SolverData& /* data */)
 {
 	/*
 	const rbd::MultiBodyConfig& mbc = mbcs[robotIndex_];

@@ -96,8 +96,7 @@ void ConstrData::setGainsList(const rbd::MultiBody& mb,
 	}
 }
 
-void ConstrData::updateNrVars(const rbd::MultiBody& mb,
-	const tasks::qp::SolverData& data)
+void ConstrData::updateNrVars(const rbd::MultiBody& mb,	const tasks::qp::SolverData& data)
 {
 	H.setZero(mb.nrDof(), mb.nrDof());
 	minusJtG.setZero(mb.nrDof(), data.totalLambda());
@@ -119,9 +118,7 @@ void ConstrData::insertSpecificLines(std::vector<int>& lineList,
 	assert(matOut.cols() == matExtract.cols());
 
 	for(std::size_t ind = 0; ind < lineList.size(); ++ind)
-	{
 		matOut.row(ind) = matExtract.row(lineList[ind]);
-	}
 }
 
 

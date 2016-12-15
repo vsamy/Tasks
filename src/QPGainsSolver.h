@@ -38,15 +38,16 @@ namespace tasks
 namespace qpgains
 {
 
-class QPGainsSolver : public tasks::qp::QPSolver
+class TASKS_DLLAPI QPGainsSolver : public tasks::qp::QPSolver
 {
 public:
 	QPGainsSolver();
 	~QPGainsSolver() {}
 
-    void addRobotToAdaptiveQP(const std::vector<rbd::MultiBody> & mbs, int robotIndex);
+	void addRobotToAdaptiveQP(const std::vector<rbd::MultiBody> & mbs, int robotIndex);
 	void setRobotq0(int robotIndex, const std::vector<std::vector<double> > &q0);
 	void setRobotAlpha0(int robotIndex, const std::vector<std::vector<double> > &alpha0);
+	// you need to call nrVars after calling this function!
 	void setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList);
 	void updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const override;
 
@@ -60,10 +61,10 @@ public:
 
 protected:
 	void preUpdate(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs) override;
-    std::size_t elemPosByRobotIndex(int robotIndex, const std::string& funName) const;
+	std::size_t elemPosByRobotIndex(int robotIndex, const std::string& funName) const;
 
 protected:
-    std::vector<int> robotIndex_;
+	std::vector<int> robotIndex_;
 	std::vector<std::unique_ptr<ConstrDataComputation>> constrDataCompute_;
 	std::vector<std::shared_ptr<ConstrData>> constrDataStock_;
 };

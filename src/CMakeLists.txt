@@ -18,11 +18,11 @@
 set(SOURCES Tasks.cpp QPSolver.cpp QPTasks.cpp QPConstr.cpp
             QPContacts.cpp QPSolverData.cpp QPMotionConstr.cpp
             GenQPSolver.cpp QPContactConstr.cpp QLDQPSolver.cpp
-            QPGainsConstr.cpp QPGainsConstrData.cpp QPGainsSolver.cpp QPGainsTask.cpp)
+            QPGainsMotionConstr.cpp QPGainsConstr.cpp QPGainsConstrData.cpp QPGainsSolver.cpp QPGainsTask.cpp)
 set(HEADERS Tasks.h QPSolver.h QPTasks.h QPConstr.h
             QPContacts.h QPSolverData.h QPMotionConstr.h
             GenQPSolver.h Bounds.h QPContactConstr.h QLDQPSolver.h
-            QPGainsConstr.h QPGainsConstrData.h QPGainsSolver.h QPGainsTask.h)
+            QPGainsMotionConstr.h QPGainsConstr.h QPGainsConstrData.h QPGainsSolver.h QPGainsTask.h)
 set(PRIVATE_HEADERS utils.h GenQPUtils.h)
 
 if(${EIGEN_LSSOL_FOUND})

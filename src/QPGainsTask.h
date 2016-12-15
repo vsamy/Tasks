@@ -38,12 +38,12 @@ namespace qpgains
 class ConstrData;
 
 
-class GainsTask : public tasks::qp::Task
+class TASKS_DLLAPI GainsTask : public tasks::qp::Task
 {
 public:
 	GainsTask(int robotIndex, double weight=1);
 
-	virtual std::pair<int, int> begin() const
+	std::pair<int, int> begin() const override
 	{
 		return std::make_pair(gainsBegin_, gainsBegin_);
 	}
@@ -54,14 +54,12 @@ public:
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
-		const tasks::qp::SolverData& data);
-	virtual void update(const std::vector<rbd::MultiBody>& mbs,
-		const std::vector<rbd::MultiBodyConfig>& mbcs,
-		const tasks::qp::SolverData& data);
+	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
+	void update(const std::vector<rbd::MultiBody>& mbs,	const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data) override;
 
-	virtual const Eigen::MatrixXd& Q() const;
-	virtual const Eigen::VectorXd& C() const;
+	const Eigen::MatrixXd& Q() const override;
+	const Eigen::VectorXd& C() const override;
 
 private:
 	int robotIndex_, gainsBegin_;

@@ -46,66 +46,64 @@ QPGainsSolver::QPGainsSolver() :
 
 void QPGainsSolver::addRobotToAdaptiveQP(const std::vector<rbd::MultiBody>& mbs, int robotIndex)
 {
-    robotIndex_.push_back(robotIndex);
-    constrDataCompute_.emplace_back(std::make_unique<ConstrDataComputation>(mbs, robotIndex));
-    constrDataStock_.emplace_back(std::make_shared<ConstrData>(mbs[robotIndex]));
+	robotIndex_.push_back(robotIndex);
+	constrDataCompute_.emplace_back(std::make_unique<ConstrDataComputation>(mbs, robotIndex));
+	constrDataStock_.emplace_back(std::make_shared<ConstrData>(mbs[robotIndex]));
 }
 
 
 void QPGainsSolver::setRobotq0(int robotIndex, const std::vector<std::vector<double> > &q0)
 {
-    auto index = elemPosByRobotIndex(robotIndex, "setRobotq0");
-    constrDataCompute_[index]->q0(q0);
+	auto index = elemPosByRobotIndex(robotIndex, "setRobotq0");
+	constrDataCompute_[index]->q0(q0);
 }
 
 
 void QPGainsSolver::setRobotAlpha0(int robotIndex, const std::vector<std::vector<double> > &alpha0)
 {
-    auto index = elemPosByRobotIndex(robotIndex, "setRobotAlpha0");
-    constrDataCompute_[index]->alpha0(alpha0);
+	auto index = elemPosByRobotIndex(robotIndex, "setRobotAlpha0");
+	constrDataCompute_[index]->alpha0(alpha0);
 }
 
 
-void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs,
-	int robotIndex, std::vector<int> &gainsList)
+void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList)
 {
-    auto index = elemPosByRobotIndex(robotIndex, "setGainsList");
-    constrDataStock_[index]->setGainsList(mbs[robotIndex], gainsList);
+	auto index = elemPosByRobotIndex(robotIndex, "setGainsList");
+	constrDataStock_[index]->setGainsList(mbs[robotIndex], gainsList);
 }
 
 
 void QPGainsSolver::updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const
 {
 	rbd::vectorToParam(solver_->result().segment(data_.alphaDBegin_[robotIndex], 
-                                                 data_.alphaD_[robotIndex]),
-		               mbc.alphaD);
+												 data_.alphaD_[robotIndex]),
+					   mbc.alphaD);
 
-    auto it = std::find(robotIndex_.cbegin(), robotIndex_.cend(), robotIndex);
-    if(it != robotIndex_.cend())
-    {
-        auto index = std::distance(robotIndex_.cbegin(), it);
-        const std::vector<int>& list = constrDataStock_[index]->gainsJointsList;
-        int line = data_.gainsBegin_[robotIndex];
+	auto it = std::find(robotIndex_.cbegin(), robotIndex_.cend(), robotIndex);
+	if(it != robotIndex_.cend())
+	{
+		auto index = std::distance(robotIndex_.cbegin(), it);
+		const std::vector<int>& list = constrDataStock_[index]->gainsJointsList;
+		int line = data_.gainsBegin_[robotIndex];
 
-        for (auto jIndex: list)
-        {
-            mbc.jointGainsK[jIndex][0] = solver_->result()[line];
-            ++line;
-        }
+		for (auto jIndex: list)
+		{
+			mbc.jointGainsK[jIndex][0] = solver_->result()[line];
+			++line;
+		}
 
-        for (auto jIndex: list)
-        {
-            mbc.jointGainsB[jIndex][0] = solver_->result()[line];
-            ++line;
-        }
+		for (auto jIndex: list)
+		{
+			mbc.jointGainsB[jIndex][0] = solver_->result()[line];
+			++line;
+		}
 
-        assert(line - data_.gainsBegin_[robotIndex] == data_.gains(robotIndex));
-    }
+		assert(line - data_.gainsBegin_[robotIndex] == data_.gains(robotIndex));
+	}
 }
 
 
-void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
-	std::vector<tasks::qp::UnilateralContact> uni,
+void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs, std::vector<tasks::qp::UnilateralContact> uni,
 	std::vector<tasks::qp::BilateralContact> bi)
 {
 	data_.alphaD_.resize(mbs.size());
@@ -179,20 +177,20 @@ void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
 	data_.nrBiLambda_ = cumLambda - data_.nrUniLambda_ - cumAlphaD;
 	data_.totalLambda_ = data_.nrUniLambda_ + data_.nrBiLambda_;
 
-    for(int rI: robotIndex_)
-    {
-        constrDataStock_[rI]->updateNrVars(mbs[rI], data_);
-        constrDataCompute_[rI]->updateNrVars(mbs[rI], data_);
-    }
+	for(int rI: robotIndex_)
+	{
+		constrDataStock_[rI]->updateNrVars(mbs[rI], data_);
+		constrDataCompute_[rI]->updateNrVars(mbs[rI], data_);
+	}
 	int cumGains = cumLambda;
-    for(std::size_t r = 0; r < mbs.size(); ++r)
-        data_.gains_[r] = 0;
+	for(std::size_t r = 0; r < mbs.size(); ++r)
+		data_.gains_[r] = 0;
 
-    for(int rI: robotIndex_)
+	for(int rI: robotIndex_)
 	{
 		data_.gainsBegin_[rI] = cumGains;
-        data_.gains_[rI] = 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
-        cumGains += 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
+		data_.gains_[rI] = 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
+		cumGains += 2*static_cast<int>(constrDataStock_[rI]->gainsLinesList.size());
 	}
 	data_.totalGains_ = cumGains - cumLambda;
 
@@ -210,7 +208,7 @@ void QPGainsSolver::nrVars(const std::vector<rbd::MultiBody>& mbs,
 
 const std::shared_ptr<ConstrData> QPGainsSolver::getConstrData(int robotIndex) const
 {
-    auto index = elemPosByRobotIndex(robotIndex, "getConstrData");
+	auto index = elemPosByRobotIndex(robotIndex, "getConstrData");
 	return constrDataStock_[index];
 }
 
@@ -227,12 +225,11 @@ const Eigen::VectorXd QPGainsSolver::gainsVec(int rIndex) const
 }
 
 
-void QPGainsSolver::preUpdate(const std::vector<rbd::MultiBody> &mbs,
-	const std::vector<rbd::MultiBodyConfig> &mbcs)
+void QPGainsSolver::preUpdate(const std::vector<rbd::MultiBody> &mbs, const std::vector<rbd::MultiBodyConfig> &mbcs)
 {
 	data_.computeNormalAccB(mbs, mbcs);
-    for(int rI: robotIndex_)
-        constrDataCompute_[rI]->computeGainsConstrMatrices(mbs, mbcs, constrDataStock_[rI]);
+	for(int rI: robotIndex_)
+		constrDataCompute_[rI]->computeGainsConstrMatrices(mbs, mbcs, constrDataStock_[rI]);
 
 	for(std::size_t i = 0; i < constr_.size(); ++i)
 		constr_[i]->update(mbs, mbcs, data_);
@@ -246,11 +243,11 @@ void QPGainsSolver::preUpdate(const std::vector<rbd::MultiBody> &mbs,
 
 std::size_t QPGainsSolver::elemPosByRobotIndex(int robotIndex, const std::string& funName) const
 {
-    auto it = std::find(robotIndex_.cbegin(), robotIndex_.cend(), robotIndex);
-    if(it != robotIndex_.cend())
-        return std::distance(robotIndex_.cbegin(), it);
-    else
-        throw("Bad robot index in " + funName);
+	auto it = std::find(robotIndex_.cbegin(), robotIndex_.cend(), robotIndex);
+	if(it != robotIndex_.cend())
+		return std::distance(robotIndex_.cbegin(), it);
+	else
+		throw("Bad robot index in " + funName);
 }
 
 

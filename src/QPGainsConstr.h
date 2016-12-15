@@ -33,23 +33,39 @@ class MultiBodyConfig;
 
 namespace tasks
 {
-// Forward declare TorqueBound 
-class TorqueBound;
+// Forward declare QBound 
+class QBound;
+class AlphaBound;
 
 // Forward ConstrData
 namespace qpgains
 {
 class ConstrData;
 
-
-class BoundGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Bound>
+/**
+	* Avoid to reach articular position limits based on direct integration.
+	* This is similar to @see tasks::qp::JointLimitsConstr.
+	* This constraint will perform for each Non-Selected (NS) joint
+	* when using the adaptive qp.
+	* This constraint can be impossible to fulfill when articulation velocity
+	* is really high. Always prefer to use DamperJointLimitsConstr.
+	*/
+class TASKS_DLLAPI JointLimitsNoGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Bound>
 {
 public:
 	/**
 		* @param mbs Multi-robot system.
 		* @param robotIndex Constrained robot Index in mbs.
+		* @param bound Articular position bounds.
+		* @param step Time step in second.
 		*/
-	BoundGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
+	JointLimitsNoGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+		QBound bound, double step);
+
+	// Constraint
+	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
+	void update(const std::vector<rbd::MultiBody>& mbs,	const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data) override;
 
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
@@ -57,42 +73,54 @@ public:
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
-	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
-		const tasks::qp::SolverData& data);
-
-	virtual void update(const std::vector<rbd::MultiBody>& /* mbs */,
-		const std::vector<rbd::MultiBodyConfig>& /* mbcs */,
-		const tasks::qp::SolverData& /* data */);
-
-	virtual std::string nameBound() const;
-	virtual std::string descBound(const std::vector<rbd::MultiBody>& mbs, int line);
+	std::string nameBound() const override;
+	std::string descBound(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
 	// Bound Constraint
-	virtual int beginVar() const;
+	int beginVar() const override;
 
-	virtual const Eigen::VectorXd& Lower() const;
-	virtual const Eigen::VectorXd& Upper() const;
+	const Eigen::VectorXd& Lower() const override;
+	const Eigen::VectorXd& Upper() const override;
 
 private:
-	int robotIndex_, gainsBegin_;
+	int robotIndex_, alphaDBegin_, alphaDOffset_;
+	double step_;
 	std::shared_ptr<ConstrData> constrData_;
+	Eigen::VectorXd qMin_, qMax_;
+	Eigen::VectorXd qVec_, alphaVec_;
 	Eigen::VectorXd lower_, upper_;
 };
 
 
 
-class MotionGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
+/**
+	* Avoid to reach articular position and velocity limits based on
+	* a velocity damper.
+	* This is similar to @see tasks::qp::DamperJointLimitsConstr.
+	* This constraint will perform for each Non-Selected (NS) joint
+	* when using the adaptive qp.
+	*/
+class TASKS_DLLAPI DamperJointLimitsNoGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Bound>
 {
 public:
-	MotionGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
-		const TorqueBound& tb);
+	/**
+		* @param mbs Multi-robot system.
+		* @param robotIndex Constrained robot Index in mbs.
+		* @param qBound Articular position bounds.
+		* @param aBound Articular velocity bounds.
+		* @param interPercent \f$ interPercent (\overline{q} - \underline{q}) \f$
+		* @param securityPercent \f$ securityPercent (\overline{q} - \underline{q}) \f$
+		* @param damperOffset \f$ \xi_{\text{off}} \f$
+		* @param step Time step in second.
+		*/
+	DamperJointLimitsNoGainsConstr(const std::vector<rbd::MultiBody>& mbs,
+		int robotIndex, const QBound& qBound, const AlphaBound& aBound,
+		double interPercent, double securityPercent, double damperOffset, double step);
 
-	void computeTorque(const Eigen::VectorXd& alphaD,
-		const Eigen::VectorXd& lambda);
-	const Eigen::VectorXd& torque() const;
-	void torque(const std::vector<rbd::MultiBody>& mbs,
-		std::vector<rbd::MultiBodyConfig>& mbcs) const;
+	// Constraint
+	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
+	void update(const std::vector<rbd::MultiBody>& mbs,	const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data) override;
 
 	// Add the pointer to the problem datas
 	void configureConstraint(const QPGainsSolver& sol)
@@ -100,152 +128,47 @@ public:
 		constrData_ = sol.getConstrData(robotIndex_);
 	}
 
-	// Constraint
-	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
-		const tasks::qp::SolverData& data);
+	std::string nameBound() const override;
+	std::string descBound(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	virtual void update(const std::vector<rbd::MultiBody>& mbs,
-		const std::vector<rbd::MultiBodyConfig>& mbcs,
-		const tasks::qp::SolverData& data);
+	// Bound Constraint
+	int beginVar() const override;
 
-	// Description
-	virtual std::string nameGenInEq() const;
-	virtual std::string descGenInEq(const std::vector<rbd::MultiBody>& mbs, int line);
+	const Eigen::VectorXd& Lower() const override;
+	const Eigen::VectorXd& Upper() const override;
 
-	// Inequality Constraint
-	virtual int maxGenInEq() const;
+	/// compute damping that avoid speed jump
+	double computeDamping(double alpha, double dist, double iDist, double sDist);
+	double computeDamper(double dist, double iDist, double sDist, double damping);
 
-	virtual const Eigen::MatrixXd& AGenInEq() const;
-	virtual const Eigen::VectorXd& LowerGenInEq() const;
-	virtual const Eigen::VectorXd& UpperGenInEq() const;
+private:
+	struct DampData
+	{
+		enum State {Low, Upp, Free};
 
-protected:
-	int robotIndex_, alphaDBegin_, nrDof_, lambdaBegin_, nrLambda_;
+		DampData(double mi, double ma, double miV, double maV,
+				 double idi, double sdi, int aDB, int i):
+			min(mi), max(ma), minVel(miV), maxVel(maV), iDist(idi), sDist(sdi),
+			jointIndex(i), alphaDBegin(aDB), damping(0.), state(Free)
+		{}
+
+		double min, max;
+		double minVel, maxVel;
+		double iDist, sDist;
+		int jointIndex;
+		int alphaDBegin;
+		double damping;
+		State state;
+	};
+
+private:
+	int robotIndex_, alphaDBegin_;
+	std::vector<DampData> data_;
 	std::shared_ptr<ConstrData> constrData_;
-	std::size_t nrLines_;
 
-	Eigen::VectorXd curTorque_;
-
-	Eigen::MatrixXd A_;
-	Eigen::VectorXd AL_, AU_;
-	Eigen::VectorXd torqueL_, torqueU_;
-};
-
-
-
-class MotionGainsEqualConstr : public tasks::qp::ConstraintFunction<tasks::qp::Equality>
-{
-public:
-	MotionGainsEqualConstr(const std::vector<rbd::MultiBody>& mbs,
-		int robotIndex);
-
-	Eigen::MatrixXd getA() const
-	{
-		return A_;
-	}
-
-	Eigen::VectorXd getb() const
-	{
-		return b_;
-	}
-
-	// Add the pointer to the problem datas
-	void configureConstraint(const QPGainsSolver& sol)
-	{
-		constrData_ = sol.getConstrData(robotIndex_);
-	}
-
-	// Constraint
-	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
-		const tasks::qp::SolverData& data);
-
-	void update(const std::vector<rbd::MultiBody>& mbs,
-		const std::vector<rbd::MultiBodyConfig>& mbcs,
-		const tasks::qp::SolverData& data);
-
-	// Description
-	virtual std::string nameEq() const;
-	virtual std::string descEq(const std::vector<rbd::MultiBody>& mbs, int line);
-
-	// Inequality Constraint
-	virtual int maxEq() const;
-
-	virtual const Eigen::MatrixXd& AEq() const;
-	virtual const Eigen::VectorXd& bEq() const;
-
-protected:
-	int robotIndex_, alphaDBegin_, nrDof_, nrLambda_, lambdaBegin_;
-	int gainsBegin_;
-	std::shared_ptr<ConstrData> constrData_;
-	std::size_t nrLines_;
-
-	Eigen::VectorXd curTorque_;
-
-	Eigen::MatrixXd A_;
-	Eigen::VectorXd b_;
-};
-
-
-class TorquePDConstr : public tasks::qp::ConstraintFunction<tasks::qp::GenInequality>
-{
-public:
-	TorquePDConstr(const std::vector<rbd::MultiBody>& mbs,
-		int robotIndex, const TorqueBound& tb);
-
-	void computeMotorTorque(const Eigen::VectorXd& gains);
-	const Eigen::VectorXd& motorTorque() const;
-	void motorTorque(const std::vector<rbd::MultiBody>& mbs,
-		std::vector<rbd::MultiBodyConfig>& mbcs) const;
-
-	Eigen::MatrixXd getA() const
-	{
-		return A_;
-	}
-
-	Eigen::VectorXd getAL() const
-	{
-		return AL_;
-	}
-
-	Eigen::VectorXd getAU() const
-	{
-		return AU_;
-	}
-
-	// Add the pointer to the problem datas
-	void configureConstraint(const QPGainsSolver& sol)
-	{
-		constrData_ = sol.getConstrData(robotIndex_);
-	}
-
-	// Constraint
-	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
-		const tasks::qp::SolverData& data);
-
-	void update(const std::vector<rbd::MultiBody>& mb,
-		const std::vector<rbd::MultiBodyConfig>& mbcs,
-		const tasks::qp::SolverData& data);
-
-	// Description
-	virtual std::string nameGenInEq() const;
-	virtual std::string descGenInEq(const std::vector<rbd::MultiBody>& mbs, int line);
-
-	// Inequality Constraint
-	virtual int maxGenInEq() const;
-
-	virtual const Eigen::MatrixXd& AGenInEq() const;
-	virtual const Eigen::VectorXd& LowerGenInEq() const;
-	virtual const Eigen::VectorXd& UpperGenInEq() const;
-
-protected:
-	int robotIndex_, nrDof_, gainsBegin_;
-	std::shared_ptr<ConstrData> constrData_;
-	std::size_t nrLines_;
-
-	Eigen::VectorXd curTorque_, torqueL_, torqueU_;
-
-	Eigen::MatrixXd A_;
-	Eigen::VectorXd AL_, AU_;
+	Eigen::VectorXd lower_, upper_;
+	double step_;
+	double damperOff_;
 };
 
 } // namespace qpgains
