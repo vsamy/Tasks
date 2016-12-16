@@ -113,7 +113,7 @@ std::string JointLimitsNoGainsConstr::nameBound() const
 
 std::string JointLimitsNoGainsConstr::descBound(const std::vector<rbd::MultiBody>& mbs, int line)
 {
-	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], line, false);
+	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], line, true);
 	return std::string("Joint: ") + mbs[robotIndex_].joint(jIndex).name();
 }
 
@@ -252,7 +252,7 @@ std::string DamperJointLimitsNoGainsConstr::nameBound() const
 std::string DamperJointLimitsNoGainsConstr::descBound(
 	const std::vector<rbd::MultiBody>& mbs, int line)
 {
-	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], line, false);
+	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], line, true);
 	return std::string("Joint: ") + mbs[robotIndex_].joint(jIndex).name();
 }
 

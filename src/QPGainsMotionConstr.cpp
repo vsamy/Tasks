@@ -301,7 +301,7 @@ void MotionGainsEqualConstr::update(const std::vector<rbd::MultiBody>& /* mbs */
 		constrData_->minusJtG, A_.block(0, lambdaBegin_, nrLines_, nrLambda_));
 
 	// We can't use insertSpecificLines for error and derror
-	// Because we want to insert a vecteur in matrix
+	// Because we want to insert a vector in a matrix
 	for(std::size_t i = 0; i < nrLines_; ++i)
 		A_(i, gainsBegin_+i) = -constrData_->error[i]; // <=> A_.block(0, gainsBegin_, nrLines_, nrLines_) = -constrData_->error.asDiagonal()
 
@@ -309,8 +309,7 @@ void MotionGainsEqualConstr::update(const std::vector<rbd::MultiBody>& /* mbs */
 		A_(i, gainsBegin_+nrLines_+i) = -constrData_->derror[i]; // <=> A_.block(0, gainsBegin_ + nrLines_, nrLines_, nrLines_) = -constrData_->derror.asDiagonal()
 
 	// BEq = -C
-	constrData_->insertSpecificLines(constrData_->gainsLinesList,
-		-constrData_->C, b_);
+	constrData_->insertSpecificLines(constrData_->gainsLinesList, -constrData_->C, b_);
 }
 
 int MotionGainsEqualConstr::maxEq() const
@@ -427,7 +426,7 @@ void TorquePDConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
 	// A = [0 0 e de]
 
 	// We can't use insertSpecificLines for error and derror
-	// Because we want to insert a vecteur in matrix
+	// Because we want to insert a vector in a matrix
 	for(std::size_t i = 0; i < nrLines_; ++i)
 		A_(i, gainsBegin_+i) = constrData_->error[i]; // <=> A_.block(0, gainsBegin_, nrLines_, nrLines_) = constrData_->error.asDiagonal()
 
@@ -435,10 +434,8 @@ void TorquePDConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
 		A_(i, gainsBegin_+nrLines_+i) = constrData_->derror[i]; // <=> A_.block(0, gainsBegin_ + nrLines_, nrLines_, nrLines_) = constrData_->derror.asDiagonal()
 
 	// b = tau_bound
-	constrData_->insertSpecificLines(constrData_->gainsLinesList,
-		torqueL_, AL_);
-	constrData_->insertSpecificLines(constrData_->gainsLinesList,
-		torqueU_, AU_);
+	constrData_->insertSpecificLines(constrData_->gainsLinesList, torqueL_, AL_);
+	constrData_->insertSpecificLines(constrData_->gainsLinesList, torqueU_, AU_);
 }
 
 int TorquePDConstr::maxGenInEq() const
