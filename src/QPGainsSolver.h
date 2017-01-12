@@ -84,7 +84,7 @@ public:
 		* @throw std::runtime_error if the robot has not been added yet.
 		* @warning You need to call @see nrVars after this function and beforedoing any @see solve
 		*/
-	void setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList);
+	void setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, const std::vector<int> &gainsList);
 	/** Update @see rbd::MultiBodyConfig with solver's last results
 		* @param mbc The MultiBodyConfig of the robot
 		* @param robotIndex The index of the robot

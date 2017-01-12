@@ -67,7 +67,7 @@ void QPGainsSolver::setRobotAlpha0(int robotIndex, const std::vector<std::vector
 }
 
 
-void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, std::vector<int> &gainsList)
+void QPGainsSolver::setGainsList(const std::vector<rbd::MultiBody> &mbs, int robotIndex, const std::vector<int> &gainsList)
 {
 	auto index = elemPosByRobotIndex(robotIndex, "setGainsList");
 	constrDataStock_[index]->setGainsList(mbs[robotIndex], gainsList);
