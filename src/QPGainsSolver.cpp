@@ -47,9 +47,12 @@ QPGainsSolver::QPGainsSolver() :
 
 void QPGainsSolver::addRobotToAdaptiveQP(const std::vector<rbd::MultiBody>& mbs, int robotIndex)
 {
-	robotIndex_.push_back(robotIndex);
-	constrDataCompute_.emplace_back(std::make_unique<ConstrDataComputation>(mbs, robotIndex));
-	constrDataStock_.emplace_back(std::make_shared<ConstrData>(mbs[robotIndex]));
+	if(std::find(robotIndex_.cbegin(), robotIndex_.cend(), robotIndex) == robotIndex_.cend())
+	{
+		robotIndex_.push_back(robotIndex);
+		constrDataCompute_.emplace_back(std::make_unique<ConstrDataComputation>(mbs, robotIndex));
+		constrDataStock_.emplace_back(std::make_shared<ConstrData>(mbs[robotIndex]));
+	}
 }
 
 
