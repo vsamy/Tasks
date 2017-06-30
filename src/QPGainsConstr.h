@@ -42,6 +42,74 @@ namespace qpgains
 {
 class ConstrData;
 
+/**
+	* Over damped system constraint for \f$K\f$ and \f$B\f$. 
+	* Linearization of the square root at K=400 => B >= 0.025K + 5
+	*/
+class TASKS_DLLAPI OverDampedGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Inequality>
+{
+public:
+	/** Constructor
+		* @param mbs Multi bodies of all robots
+		* @param robotIndex Constrained robot Index in mbs
+		*/
+	OverDampedGainsConstr(const std::vector<rbd::MultiBody>& mbs, int robotIndex);
+
+	/** Assign the pointer to the problem datas.
+		@param sol The solver the constraint belongs to
+		@warning This must be called before any update.
+		*/
+	void configureConstraint(const QPGainsSolver& sol)
+	{
+		constrData_ = sol.getConstrData(robotIndex_);
+	}
+
+	/** Update the system size
+	 * @param mbs Multi bodies of all robots
+	 * @param data The datas of the solver
+	 */
+	void updateNrVars(const std::vector<rbd::MultiBody>& mbs, const tasks::qp::SolverData& data) override;
+	/** Update the constraint
+	 * @param mb Multi bodies of all robots
+	 * @param mbcs Multi bodies configs of all robots
+	 * @param data The datas of the solver
+	 */
+	void update(const std::vector<rbd::MultiBody>& mbs, const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data) override;
+
+	/** Return the name of the constraint
+	 * @return The name of the constraint
+	 */
+	std::string nameInEq() const override;
+	/** Return the name of the joint that fails when the qp fails.
+	 * @param mb Multi bodies of all robots
+	 * @param line The line for which the qp failed
+	 * @return The name of the joint
+	 */
+	std::string descInEq(const std::vector<rbd::MultiBody>& mbs, int line) override;
+
+	/** Return the number of constraints
+	 * @return The number of constraints
+	 */
+	int maxInEq() const override;
+
+	/** Get the computed matrix part
+		* @return The matrix
+		*/
+	const Eigen::MatrixXd& AInEq() const override;
+	/** Get the computed vector part
+		* @return The vector
+		*/
+	const Eigen::VectorXd& bInEq() const override;
+
+private:
+	int robotIndex_, nrLines_;
+	std::shared_ptr<ConstrData> constrData_;
+	Eigen::MatrixXd Aineq_;
+	Eigen::VectorXd bineq_;
+};
+
+
 /** Avoid to reach articular position limits based on direct integration.
 	* This is similar to @see tasks::qp::JointLimitsConstr.
 	* This constraint will perform for each Non-Selected (NS) joint

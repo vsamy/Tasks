@@ -39,6 +39,78 @@ namespace qpgains
 
 
 /**
+	*												OverDampedGainsConstr
+	*/
+
+
+OverDampedGainsConstr::OverDampedGainsConstr(const std::vector<rbd::MultiBody>& /* mbs */,
+	int robotIndex) :
+	robotIndex_(robotIndex),
+	nrLines_(0),
+	constrData_(nullptr),
+	Aineq_(),
+	bineq_()
+{
+}
+
+
+void OverDampedGainsConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */, const tasks::qp::SolverData& data)
+{
+	assert(constrData_ != nullptr);
+	int gainsBegin = data.gainsBegin(robotIndex_);
+	nrLines_ = data.gains(robotIndex_) / 2;
+
+	// Aineq = [0 0 0.025 -1]
+	Aineq_.resize(nrLines_, data.nrVars());
+	Aineq_.leftCols(gainsBegin).setZero();
+	Aineq_.block(0, gainsBegin, nrLines_, gainsBegin + nrLines_).noalias() = Eigen::MatrixXd::Identity(nrLines_, nrLines_) * 0.025;
+	Aineq_.rightCols(nrLines_) = -Eigen::MatrixXd::Identity(nrLines_, nrLines_);
+
+	// bineq = [-5]
+	bineq_.setConstant(nrLines_, -5);
+}
+
+void OverDampedGainsConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
+	const std::vector<rbd::MultiBodyConfig>& /* mbcs */,
+	const tasks::qp::SolverData& /* data */)
+{
+	// Linearization around old K?
+}
+
+
+std::string OverDampedGainsConstr::nameInEq() const
+{
+	return "OverDampedGainsConstr";
+}
+
+
+std::string OverDampedGainsConstr::descInEq(const std::vector<rbd::MultiBody>& mbs,
+	int line)
+{
+	return std::string("Joint: ") + mbs[robotIndex_].joint(constrData_->gainsJointsList[line]).name();
+}
+
+
+int OverDampedGainsConstr::maxInEq() const
+{
+	return static_cast<int>(nrLines_);
+}
+
+
+const Eigen::MatrixXd& OverDampedGainsConstr::AInEq() const
+{
+	return Aineq_;
+}
+
+
+const Eigen::VectorXd& OverDampedGainsConstr::bInEq() const
+{
+	return bineq_;
+}
+
+
+
+/**
 	*												JointLimitsNoGainsConstr
 	*/
 
