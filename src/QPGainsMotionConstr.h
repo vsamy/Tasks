@@ -86,7 +86,7 @@ public:
 	 */
 	std::string descBound(const std::vector<rbd::MultiBody>& mbs, int line) override;
 
-	/** Gives the position of bound constraint inthe qp's optimization vector
+	/** Gives the position of bound constraint in the qp's optimization vector
 		* @return The position
 		*/
 	int beginVar() const override;

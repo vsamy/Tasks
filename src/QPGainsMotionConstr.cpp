@@ -60,7 +60,10 @@ void BoundGainsConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */
 	gainsBegin_ = data.gainsBegin(robotIndex_);
 	int nrVars = data.gains(robotIndex_);
 	lower_.setConstant(nrVars, 0);
-	upper_.setConstant(nrVars, std::numeric_limits<double>::infinity());
+	upper_.resize(nrVars);
+	upper_.head(nrVars / 2) = 1000.0 * Eigen::VectorXd::Ones(nrVars / 2); // K_max au pif
+	upper_.tail(nrVars / 2) = 2000.0 * Eigen::VectorXd::Ones(nrVars / 2); // B_max au pif
+	//upper_.setConstant(nrVars, std::numeric_limits<double>::infinity());
 }
 
 void BoundGainsConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
@@ -79,9 +82,12 @@ std::string BoundGainsConstr::nameBound() const
 std::string BoundGainsConstr::descBound(const std::vector<rbd::MultiBody>& mbs,
 	int line)
 {
-	std::size_t goodLine = line % constrData_->gainsLinesList.size();
+	std::size_t goodLine = line % (upper_.size() / 2);
+	/*
 	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], constrData_->gainsLinesList[goodLine], false);
 	return std::string("Joint: ") + mbs[robotIndex_].joint(jIndex).name();
+	*/
+	return std::string("Joint: ") + mbs[robotIndex_].joint(constrData_->gainsJointsList[goodLine]).name();
 }
 
 
@@ -339,8 +345,11 @@ std::string MotionGainsEqualConstr::nameEq() const
 std::string MotionGainsEqualConstr::descEq(const std::vector<rbd::MultiBody>& mbs,
 	int line)
 {
+	/*
 	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], constrData_->gainsLinesList[line], false);
 	return std::string("Joint: ") + mbs[robotIndex_].joint(jIndex).name();
+	*/
+	return std::string("Joint: ") + mbs[robotIndex_].joint(constrData_->gainsJointsList[line]).name();	
 }
 
 
@@ -471,8 +480,11 @@ std::string TorquePDConstr::nameGenInEq() const
 std::string TorquePDConstr::descGenInEq(const std::vector<rbd::MultiBody>& mbs,
 	int line)
 {
+	/*
 	int jIndex = tasks::qp::findJointFromVector(mbs[robotIndex_], constrData_->gainsLinesList[line], false);
 	return std::string("Joint: ") + mbs[robotIndex_].joint(jIndex).name();
+	*/
+	return std::string("Joint: ") + mbs[robotIndex_].joint(constrData_->gainsJointsList[line]).name();		
 }
 
 
