@@ -44,7 +44,7 @@ class ConstrData;
 
 /**
 	* Over damped system constraint for \f$K\f$ and \f$B\f$. 
-	* Linearization of the square root at K=400 => B >= 0.025K + 5
+	* Linearization of the 2 times square root of K at K=400 => B >= 0.05K + 20
 	*/
 class TASKS_DLLAPI OverDampedGainsConstr : public tasks::qp::ConstraintFunction<tasks::qp::Inequality>
 {

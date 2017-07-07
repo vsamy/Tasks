@@ -219,6 +219,7 @@ void ConstrDataComputation::q0(const std::vector<std::vector<double> > &q0)
 void ConstrDataComputation::alpha0(const std::vector<std::vector<double> > &alpha0)
 {
 	alpha0_ = alpha0;
+
 }
 
 

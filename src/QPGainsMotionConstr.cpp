@@ -61,7 +61,7 @@ void BoundGainsConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */
 	int nrVars = data.gains(robotIndex_);
 	lower_.setConstant(nrVars, 0);
 	upper_.resize(nrVars);
-	upper_.head(nrVars / 2) = 1000.0 * Eigen::VectorXd::Ones(nrVars / 2); // K_max au pif
+	upper_.head(nrVars / 2) = 2000.0 * Eigen::VectorXd::Ones(nrVars / 2); // K_max au pif
 	upper_.tail(nrVars / 2) = 2000.0 * Eigen::VectorXd::Ones(nrVars / 2); // B_max au pif
 	//upper_.setConstant(nrVars, std::numeric_limits<double>::infinity());
 }
@@ -297,7 +297,7 @@ void MotionGainsEqualConstr::update(const std::vector<rbd::MultiBody>& /* mbs */
 	if(constrData_->gainsLinesList.size() == 0)
 		return; // If no motor is used do nothing
 
-	// H*alphaD - J^t G lambda + K*(q - q0) + B*alpha = -C
+	// H*alphaD - J^t G lambda - K*(q0 - q) - B*(alpha0 - alpha) = -C
 
 	// A = [H -JtG -e -de]
 	constrData_->insertSpecificLines(constrData_->gainsLinesList,
@@ -430,7 +430,7 @@ void TorquePDConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
 	if(constrData_->gainsLinesList.empty())
 		return; // If no motor is used do nothing
 
-	// tauMin <= K*(q0 - q) - B*alpha <= tauMax
+	// tauMin <= K*(q0 - q) + B*(alpha0 - alpha) <= tauMax
 
 	// A = [0 0 e de]
 

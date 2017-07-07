@@ -70,6 +70,62 @@ private:
 };
 
 
+class TASKS_DLLAPI TorqueTask : public tasks::qp::Task
+{
+public:
+	TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+				double weight);
+
+	TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+				const Eigen::VectorXd& jointSelect,
+				double weight);
+
+	TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+				const std::string& efName,
+				double weight);
+
+
+	// Add the pointer to the problem datas
+	void configureTask(const QPGainsSolver& sol)
+	{
+		constrData_ = sol.getConstrData(robotIndex_);
+	}
+
+	virtual void updateNrVars(const std::vector<rbd::MultiBody>& mbs,
+		const tasks::qp::SolverData& data);
+	virtual void update(const std::vector<rbd::MultiBody>& mbs,
+		const std::vector<rbd::MultiBodyConfig>& mbcs,
+		const tasks::qp::SolverData& data);
+
+	virtual std::pair<int, int> begin() const
+	{
+		return std::make_pair(0, 0);
+	}
+
+	virtual const Eigen::MatrixXd& Q() const
+	{
+		return Q_;
+	}
+
+	virtual const Eigen::VectorXd& C() const
+	{
+		return C_;
+	}
+
+	virtual const Eigen::VectorXd& jointSelect() const
+	{
+		return jointSelector_;
+	}
+
+private:
+	int robotIndex_;
+	int alphaDBegin_, lambdaBegin_;
+	std::shared_ptr<ConstrData> constrData_;
+	Eigen::VectorXd jointSelector_;
+	Eigen::MatrixXd Q_;
+	Eigen::VectorXd C_;
+};
+
 } // namespace qpgains
 
 } // namespace tasks

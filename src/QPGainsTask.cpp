@@ -80,6 +80,84 @@ const Eigen::VectorXd& GainsTask::C() const
 	return C_;
 }
 
+
+/**
+	*												TorqueTask
+	*/
+
+TorqueTask::TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+                       double weight):
+  Task(weight),
+  robotIndex_(robotIndex),
+  alphaDBegin_(-1),
+  lambdaBegin_(-1),
+  jointSelector_(mbs[robotIndex].nrDof()),
+  Q_(mbs[robotIndex].nrDof(), mbs[robotIndex].nrDof()),
+  C_(mbs[robotIndex].nrDof())
+{
+  jointSelector_.setOnes();
+}
+
+TorqueTask::TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+                       const Eigen::VectorXd& jointSelect,
+                       double weight):
+  Task(weight),
+  robotIndex_(robotIndex),
+  alphaDBegin_(-1),
+  lambdaBegin_(-1),
+  jointSelector_(jointSelect),
+  Q_(mbs[robotIndex].nrDof(), mbs[robotIndex].nrDof()),
+  C_(mbs[robotIndex].nrDof())
+{
+}
+
+TorqueTask::TorqueTask(const std::vector<rbd::MultiBody>& mbs, int robotIndex,
+                       const std::string& efName,
+                       double weight):
+  Task(weight),
+  robotIndex_(robotIndex),
+  alphaDBegin_(-1),
+  lambdaBegin_(-1),
+  jointSelector_(mbs[robotIndex].nrDof()),
+  Q_(mbs[robotIndex].nrDof(), mbs[robotIndex].nrDof()),
+  C_(mbs[robotIndex].nrDof())
+{
+  rbd::Jacobian jac(mbs[robotIndex], efName);
+  jointSelector_.setZero();
+  for(auto i : jac.jointsPath())
+  {
+    //Do not add root joint !
+    if(i != 0)
+    {
+    jointSelector_.segment(mbs[robotIndex].jointPosInDof(i),
+                           mbs[robotIndex].joint(i).dof()).setOnes();
+    }
+  }
+}
+
+void TorqueTask::updateNrVars(const std::vector<rbd::MultiBody>& /* mbs */,
+                              const tasks::qp::SolverData& data)
+{
+  assert(constrData_ != nullptr);
+  if (constrData_->gainsJointsList.size() > 0)
+  	throw std::runtime_error("Torque Task does not yet work with adaptive QP.");
+  alphaDBegin_ = data.alphaDBegin(robotIndex_);
+  lambdaBegin_ = data.lambdaBegin();
+  Q_.resize(data.nrVars(), data.nrVars());
+  C_.resize(data.nrVars());
+}
+
+void TorqueTask::update(const std::vector<rbd::MultiBody>& /* mbs */,
+                        const std::vector<rbd::MultiBodyConfig>& /* mbcs */,
+                        const tasks::qp::SolverData& data)
+{
+  Eigen::MatrixXd motionMat(data.totalAlphaD(), data.nrVars());
+  motionMat << constrData_->H, constrData_->minusJtG;
+  Q_.noalias() = motionMat.transpose()*jointSelector_.asDiagonal()*motionMat;
+  C_.noalias() = constrData_->C.transpose()*jointSelector_.asDiagonal()*motionMat;
+  //C_.setZero();
+}
+
 } // namespace qpgains
 
 } // namespace tasks
