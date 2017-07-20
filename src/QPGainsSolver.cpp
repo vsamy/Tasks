@@ -88,7 +88,14 @@ void QPGainsSolver::updateMbc(rbd::MultiBodyConfig& mbc, int robotIndex) const
 	{
 		auto index = std::distance(robotIndex_.cbegin(), it);
 		const std::vector<int>& list = constrDataStock_[index]->gainsJointsList;
-		int line = data_.gainsBegin_[robotIndex];
+		int line = data_.alphaDBegin_[robotIndex];
+		for (auto jIndex: list)
+		{
+			mbc.q[jIndex][0] = solver_->result()[line];
+			++line;
+		}
+
+		line = data_.gainsBegin_[robotIndex];
 
 		for (auto jIndex: list)
 		{
