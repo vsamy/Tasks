@@ -63,11 +63,11 @@ void OverDampedGainsConstr::updateNrVars(const std::vector<rbd::MultiBody>& /* m
 	// Aineq = [0 0 0.05 -1]
 	Aineq_.resize(nrLines_, data.nrVars());
 	Aineq_.leftCols(gainsBegin).setZero();
-	Aineq_.block(0, gainsBegin, nrLines_, nrLines_).noalias() = Eigen::MatrixXd::Identity(nrLines_, nrLines_) * 0.05;
+	Aineq_.block(0, gainsBegin, nrLines_, nrLines_).noalias() = Eigen::MatrixXd::Identity(nrLines_, nrLines_) * 0.1;
 	Aineq_.rightCols(nrLines_) = -Eigen::MatrixXd::Identity(nrLines_, nrLines_);
 
 	// bineq = [-20]
-	bineq_.setConstant(nrLines_, -20);
+	bineq_.setConstant(nrLines_, 0);
 }
 
 void OverDampedGainsConstr::update(const std::vector<rbd::MultiBody>& /* mbs */,
