@@ -25,7 +25,7 @@
 
 // std
 #include <algorithm>
-#include <iostream>
+#include <numeric>
 
 namespace tasks
 {
